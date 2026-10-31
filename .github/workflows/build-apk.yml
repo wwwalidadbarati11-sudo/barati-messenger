@@ -24,6 +24,29 @@ jobs:
           mkdir -p "$RUNNER_TEMP/barati"
           unzip -q BaratiMessenger_Starter.zip -d "$RUNNER_TEMP/barati"
 
+      - name: Fix Java and Kotlin versions
+        env:
+          PROJECT_DIR: ${{ runner.temp }}/barati
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          p = Path(os.environ["PROJECT_DIR"]) / "app/build.gradle.kts"
+          s = p.read_text()
+          old = "    buildFeatures { compose = true }"
+          new = """    compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+              kotlinOptions {
+                  jvmTarget = "17"
+              }
+              buildFeatures { compose = true }"""
+          if old not in s:
+              raise SystemExit("Could not find buildFeatures line")
+          p.write_text(s.replace(old, new))
+          PY
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
