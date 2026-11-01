@@ -39,14 +39,19 @@ jobs:
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
           echo "Project folder: $PROJECT_DIR"
 
-      - name: Copy Firebase config
+            - name: Copy Firebase config
         run: |
-          if [ ! -f google-services.json ]; then
-            echo "ERROR: google-services.json not found in repository root"
+          CONFIG_FILE=$(find . -type f -iname 'google-services.json' -not -path './.git/*' | head -n 1)
+
+          if [ -z "$CONFIG_FILE" ]; then
+            echo "ERROR: google-services.json not found"
+            echo "Repository files:"
+            find . -maxdepth 4 -type f
             exit 1
           fi
 
-          cp google-services.json "$PROJECT_DIR/app/google-services.json"
+          echo "Found Firebase config: $CONFIG_FILE"
+          cp "$CONFIG_FILE" "$PROJECT_DIR/app/google-services.json"
           echo "Firebase config copied successfully"
 
       - name: Fix Java and Kotlin versions
