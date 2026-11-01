@@ -31,6 +31,10 @@ jobs:
           fi
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
           echo "Project folder: $PROJECT_DIR"
+                - name: Copy Firebase config
+        run: |
+          cp google-services.json "$PROJECT_DIR/app/google-services.json"
+          echo "Firebase config copied successfully"
 
       - name: Fix Java and Kotlin versions
         run: |
