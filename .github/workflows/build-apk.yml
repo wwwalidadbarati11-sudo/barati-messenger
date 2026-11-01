@@ -1,3 +1,4 @@
+
 name: Build BARATI APK
 
 on:
@@ -39,7 +40,7 @@ jobs:
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
           echo "Project folder: $PROJECT_DIR"
 
-            - name: Copy Firebase config
+      - name: Copy Firebase config
         run: |
           CONFIG_FILE=$(find . -type f -iname 'google-services.json' -not -path './.git/*' | head -n 1)
 
