@@ -24,22 +24,18 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/barati"
           unzip -o BaratiMessenger_Starter.zip -d "$RUNNER_TEMP/barati"
-
           PROJECT_DIR=$(find "$RUNNER_TEMP/barati" -type f \( -name settings.gradle -o -name settings.gradle.kts \) -printf '%h\n' | head -n 1)
-
           if [ -z "$PROJECT_DIR" ]; then
             echo "ERROR: Gradle project not found"
             exit 1
           fi
-
           if [ ! -d "$PROJECT_DIR/app" ]; then
             echo "ERROR: app folder not found"
             exit 1
           fi
-
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-          echo "Project folder: $PROJECT_DIR"
-                - name: Create valid Android Manifest
+
+      - name: Create valid Android Manifest
         run: |
           cat > "$PROJECT_DIR/app/src/main/AndroidManifest.xml" <<'EOF'
           <?xml version="1.0" encoding="utf-8"?>
@@ -64,33 +60,20 @@ jobs:
       - name: Copy Firebase config
         run: |
           CONFIG_FILE=$(find . -type f -iname 'google-services.json' -not -path './.git/*' | head -n 1)
-
           if [ -z "$CONFIG_FILE" ]; then
             echo "ERROR: google-services.json not found"
-            echo "Repository files:"
-            find . -maxdepth 4 -type f
             exit 1
           fi
-
-          echo "Found Firebase config: $CONFIG_FILE"
           cp "$CONFIG_FILE" "$PROJECT_DIR/app/google-services.json"
-          echo "Firebase config copied successfully"
 
       - name: Fix Java and Kotlin versions
         run: |
           python3 - <<'PY'
           import os
           from pathlib import Path
-
           p = Path(os.environ["PROJECT_DIR"]) / "app/build.gradle.kts"
-
-          if not p.exists():
-              raise SystemExit("ERROR: app/build.gradle.kts not found")
-
           s = p.read_text()
-
           old = "    buildFeatures { compose = true }"
-
           new = """    compileOptions {
                   sourceCompatibility = JavaVersion.VERSION_17
                   targetCompatibility = JavaVersion.VERSION_17
@@ -99,12 +82,8 @@ jobs:
                   jvmTarget = "17"
               }
               buildFeatures { compose = true }"""
-
           if old in s:
               p.write_text(s.replace(old, new))
-              print("Java and Kotlin versions updated")
-          else:
-              print("Existing buildFeatures line not found; leaving file unchanged")
           PY
 
       - name: Set up Gradle
@@ -115,7 +94,6 @@ jobs:
       - name: Generate debug keystore
         run: |
           mkdir -p "$HOME/.config/.android"
-
           keytool -genkeypair -v \
             -keystore "$HOME/.config/.android/debug.keystore" \
             -storepass android \
