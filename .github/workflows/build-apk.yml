@@ -9,13 +9,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        - name: Extract project ZIP
-  run: |
-    unzip -o BaratiMessenger_Starter.zip -d project
-    ls -la project
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -23,19 +20,28 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Extract project
+      - name: Extract project ZIP
         run: |
           mkdir -p "$RUNNER_TEMP/barati"
-          unzip -q BaratiMessenger_Starter.zip -d "$RUNNER_TEMP/barati"
+          unzip -o BaratiMessenger_Starter.zip -d "$RUNNER_TEMP/barati"
+          echo "Searching for Gradle project..."
+          find "$RUNNER_TEMP/barati" -type f \( -name settings.gradle -o -name settings.gradle.kts \) -print
+          PROJECT_DIR=$(find "$RUNNER_TEMP/barati" -type f \( -name settings.gradle -o -name settings.gradle.kts \) -printf '%h\n' | head -n 1)
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "ERROR: Gradle project not found in ZIP"
+            exit 1
+          fi
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Project folder: $PROJECT_DIR"
 
       - name: Fix Java and Kotlin versions
-        env:
-          PROJECT_DIR: ${{ runner.temp }}/barati
         run: |
           python3 - <<'PY'
           import os
           from pathlib import Path
           p = Path(os.environ["PROJECT_DIR"]) / "app/build.gradle.kts"
+          if not p.exists():
+              raise SystemExit("ERROR: app/build.gradle.kts not found")
           s = p.read_text()
           old = "    buildFeatures { compose = true }"
           new = """    compileOptions {
@@ -46,9 +52,10 @@ jobs:
                   jvmTarget = "17"
               }
               buildFeatures { compose = true }"""
-          if old not in s:
-              raise SystemExit("Could not find buildFeatures line")
-          p.write_text(s.replace(old, new))
+          if old in s:
+              p.write_text(s.replace(old, new))
+          else:
+              print("The Java/Kotlin version line was not changed.")
           PY
 
       - name: Set up Gradle
@@ -56,10 +63,14 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Get SHA fingerprints  
-        run: ./gradlew signingReport
+      - name: Get SHA fingerprints
+        run: gradle -p "$PROJECT_DIR" signingReport
+
+      - name: Build APK
+        run: gradle -p "$PROJECT_DIR" assembleDebug
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: barati-debug-apk
-          path: ${{ runner.temp }}/barati/app/build/outputs/apk/debug/app-debug.apk
+          path: ${{ runner.temp }}/barati/**/app/build/outputs/apk/debug/app-debug.apk
