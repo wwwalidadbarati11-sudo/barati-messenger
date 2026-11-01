@@ -52,8 +52,10 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Build APK
-        run: gradle -p "$RUNNER_TEMP/barati" assembleDebug
+      - name: Get SHA fingerprints  
+        run: ./gradlew signingReport
+        run:: 
+        run: 
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
