@@ -24,11 +24,9 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/barati"
           unzip -o BaratiMessenger_Starter.zip -d "$RUNNER_TEMP/barati"
-          echo "Searching for Gradle project..."
-          find "$RUNNER_TEMP/barati" -type f \( -name settings.gradle -o -name settings.gradle.kts \) -print
           PROJECT_DIR=$(find "$RUNNER_TEMP/barati" -type f \( -name settings.gradle -o -name settings.gradle.kts \) -printf '%h\n' | head -n 1)
           if [ -z "$PROJECT_DIR" ]; then
-            echo "ERROR: Gradle project not found in ZIP"
+            echo "ERROR: Gradle project not found"
             exit 1
           fi
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
@@ -54,29 +52,28 @@ jobs:
               buildFeatures { compose = true }"""
           if old in s:
               p.write_text(s.replace(old, new))
-          else:
-              print("The Java/Kotlin version line was not changed.")
           PY
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-- name: Generate debug keystore
-  run: |
-    mkdir -p "$HOME/.config/.android"
-    keytool -genkeypair -v \
-      -keystore "$HOME/.config/.android/debug.keystore" \
-      -storepass android \
-      -alias AndroidDebugKey \
-      -keypass android \
-      -keyalg RSA \
-      -keysize 2048 \
-      -validity 10000 \
-      -dname "CN=Android Debug,O=Android,C=US"
 
-- name: Get SHA fingerprints
-  run: gradle -p "$PROJECT_DIR" signingReport --console=plain
+      - name: Generate debug keystore
+        run: |
+          mkdir -p "$HOME/.config/.android"
+          keytool -genkeypair -v \
+            -keystore "$HOME/.config/.android/debug.keystore" \
+            -storepass android \
+            -alias AndroidDebugKey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Get SHA fingerprints
+        run: gradle -p "$PROJECT_DIR" signingReport --console=plain
 
       - name: Build APK
         run: gradle -p "$PROJECT_DIR" assembleDebug
