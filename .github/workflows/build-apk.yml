@@ -1,10 +1,12 @@
-
 name: Build BARATI APK
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -14,105 +16,32 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Java
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Extract project ZIP
-        run: |
-          mkdir -p "$RUNNER_TEMP/barati"
-          unzip -o BaratiMessenger_Starter.zip -d "$RUNNER_TEMP/barati"
-          PROJECT_DIR=$(find "$RUNNER_TEMP/barati" -type f \( -name settings.gradle -o -name settings.gradle.kts \) -printf '%h\n' | head -n 1)
-          if [ -z "$PROJECT_DIR" ]; then
-            echo "ERROR: Gradle project not found"
-            exit 1
-          fi
-          if [ ! -d "$PROJECT_DIR/app" ]; then
-            echo "ERROR: app folder not found"
-            exit 1
-          fi
-          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
-
-      - name: Create valid Android Manifest
-        run: |
-          cat > "$PROJECT_DIR/app/src/main/AndroidManifest.xml" <<'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <uses-permission android:name="android.permission.INTERNET" />
-              <application
-                  android:label="BARATI MESSENGER"
-                  android:allowBackup="true"
-                  android:supportsRtl="true">
-                  <activity
-                      android:name="com.barati.messenger.MainActivity"
-                      android:exported="true">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                  </activity>
-              </application>
-          </manifest>
-          EOF
-
-      - name: Copy Firebase config
-        run: |
-          CONFIG_FILE=$(find . -type f -iname 'google-services.json' -not -path './.git/*' | head -n 1)
-          if [ -z "$CONFIG_FILE" ]; then
-            echo "ERROR: google-services.json not found"
-            exit 1
-          fi
-          cp "$CONFIG_FILE" "$PROJECT_DIR/app/google-services.json"
-
-      - name: Fix Java and Kotlin versions
-        run: |
-          python3 - <<'PY'
-          import os
-          from pathlib import Path
-          p = Path(os.environ["PROJECT_DIR"]) / "app/build.gradle.kts"
-          s = p.read_text()
-          old = "    buildFeatures { compose = true }"
-          new = """    compileOptions {
-                  sourceCompatibility = JavaVersion.VERSION_17
-                  targetCompatibility = JavaVersion.VERSION_17
-              }
-              kotlinOptions {
-                  jvmTarget = "17"
-              }
-              buildFeatures { compose = true }"""
-          if old in s:
-              p.write_text(s.replace(old, new))
-          PY
-
-      - name: Set up Gradle
+      - name: Set up Gradle 8.9
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
 
-      - name: Generate debug keystore
+      - name: Check project files
         run: |
-          mkdir -p "$HOME/.config/.android"
-          keytool -genkeypair -v \
-            -keystore "$HOME/.config/.android/debug.keystore" \
-            -storepass android \
-            -alias AndroidDebugKey \
-            -keypass android \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -dname "CN=Android Debug,O=Android,C=US"
-
-      - name: Get SHA fingerprints
-        run: gradle -p "$PROJECT_DIR" signingReport --console=plain
+          test -f settings.gradle.kts
+          test -f build.gradle.kts
+          test -f app/build.gradle.kts
+          test -f app/google-services.json
+          test -f app/src/main/AndroidManifest.xml
+          test -f app/src/main/java/com/barati/messenger/MainActivity.kt
 
       - name: Build APK
-        run: gradle -p "$PROJECT_DIR" assembleDebug
+        run: gradle assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: barati-debug-apk
-          path: ${{ runner.temp }}/barati/**/app/build/outputs/apk/debug/app-debug.apk
+          path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
