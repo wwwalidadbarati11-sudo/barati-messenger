@@ -1,0 +1,28 @@
+{
+  "project_info": {
+    "project_number": "364922276189",
+    "project_id": "barati-messenger",
+    "storage_bucket": "barati-messenger.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:364922276189:android:a02be27ef0a5fca9dc00b4",
+        "android_client_info": {
+          "package_name": "com.barati.messenger"
+        }
+      },
+      "api_key": [
+        {
+          "current_key": "AIzaSyDtNBJJ-fDOITdA4oh7axVnAJ2pLuEYsvs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
